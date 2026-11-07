@@ -546,3 +546,19 @@ Berikut adalah daftar tampilan antarmuka terstruktur aplikasi SIRKULA-AI yang si
 ### 12. Layar Web Command Center & Spatiotemporal Radar Kota Bandung (Web)
 *Pusat komando pemantauan makro Pemkot dan panel simulasi kendali cuaca/time-warp dewan juri.*
 ![Web Command Center & Radar Kota Bandung](./screenshots/web_command_center_radar.png)
+
+### 13. ROLE dan AKUN TESTING
+
+### Akun Login Per-Role (Web & Mobile Sama)
+Password semua akun: `password123` (atau password apa pun $\ge 6$ karakter).
+
+| Role | Entitas | Email Login / No. WhatsApp | Password |
+| :--- | :--- | :--- | :--- |
+| **DONOR** | Sasana Budaya Ganesha (Sabuga) | `catering@sabuga.itb.ac.id`<br>`+6281200000001` | `password123` |
+| **TIER_1_HUB** | DKM Masjid Al-Ukhuwah Balai Kota | `marbot@alukhuwah-bandung.org`<br>`+6281200000011` | `password123` |
+| **TIER_2_FARMER** | Bio-Larva Maggot BSF Mandiri Cibiru | `maggot.cibiru@gmail.com`<br>`+6281200000021` | `password123` |
+| **TIER_3_COMPOST** | Bank Sampah Induk Bandung Bersih | `banksampah.baksil@bandung.go.id`<br>`+6281200000031` | `password123` |
+| **ESG_AUDITOR** | Auditor ESG & DLH Kota Bandung | `auditor@dlh.bandung.go.id`<br>`+6281200000041` | `password123` |
+| **SIMULATOR_ADMIN** | Dewan Juri & Simulator Administrator | `admin@sirkula.ai`<br>`+6281200000051` | `password123` |
+
+skipped: localStorage offline cache fallback, add when butuh offline-first PWA mode tanpa internet.
