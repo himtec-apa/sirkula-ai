@@ -1,0 +1,20 @@
+{
+  "name": "@sirkula/bio-thermal-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/**/*.spec.js"
+  },
+  "dependencies": {
+    "@sirkula/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^5.7.3"
+  }
+}

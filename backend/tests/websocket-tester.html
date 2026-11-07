@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIRKULA-AI — Standalone WebSocket Test Client</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --surface-border: #334155;
+      --primary: #0E9F8B;
+      --primary-hover: #0B7A6B;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --accent-warning: #FBBF24;
+      --accent-danger: #F87171;
+      --accent-success: #34D399;
+      --accent-info: #60A5FA;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      padding: 24px;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--surface-border);
+      margin-bottom: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-live { background: rgba(52, 211, 153, 0.15); color: var(--accent-success); border: 1px solid var(--accent-success); }
+    .badge-off { background: rgba(248, 113, 113, 0.15); color: var(--accent-danger); border: 1px solid var(--accent-danger); }
+    .grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 14px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    input, select {
+      width: 100%;
+      background: #090E17;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+    }
+    input:focus { border-color: var(--primary); }
+    button {
+      background: var(--primary);
+      color: #000;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.15s ease;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    button:hover { background: var(--primary-hover); color: #fff; }
+    .btn-secondary {
+      background: #253347;
+      color: var(--text);
+      border: 1px solid var(--surface-border);
+      margin-top: 8px;
+    }
+    .btn-secondary:hover { background: #334155; }
+    .btn-danger { background: rgba(248, 113, 113, 0.2); color: var(--accent-danger); border: 1px solid var(--accent-danger); margin-top: 8px; }
+    .btn-danger:hover { background: rgba(248, 113, 113, 0.4); }
+    .room-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .chip {
+      background: #090E17;
+      border: 1px solid var(--surface-border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+    }
+    .chip:hover { border-color: var(--primary); color: var(--primary); }
+    .chip.active { background: rgba(14, 159, 139, 0.2); border-color: var(--primary); color: var(--primary); }
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .feed-stats {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .logs-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .log-item {
+      background: #090E17;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      animation: fadeIn 0.2s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .log-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+    .log-event {
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .evt-created { background: rgba(52, 211, 153, 0.2); color: var(--accent-success); }
+    .evt-transitioned { background: rgba(251, 191, 36, 0.2); color: var(--accent-warning); }
+    .evt-claimed { background: rgba(96, 165, 250, 0.2); color: var(--accent-info); }
+    .evt-handover { background: rgba(168, 85, 247, 0.2); color: #C084FC; }
+    .evt-system { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+    pre {
+      font-size: 12px;
+      color: #CBD5E1;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>SIRKULA-AI Realtime Radar (Standalone Tester)</h1>
+      <span id="conn-badge" class="badge badge-off">DISCONNECTED</span>
+    </div>
+    <div>
+      <span id="conn-id" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted);">-</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="card">
+        <h2>Target Backend Gateway</h2>
+        <div class="form-group">
+          <label>URL Gateway</label>
+          <input type="text" id="ws-url" value="http://localhost:4000" />
+        </div>
+        <button id="btn-toggle-conn">Connect</button>
+      </div>
+
+      <div class="card">
+        <h2>Room Subscription</h2>
+        <div class="form-group">
+          <label>Join Room</label>
+          <input type="text" id="custom-room" placeholder="room:TIER_1_HUB" />
+        </div>
+        <button class="btn-secondary" id="btn-join-custom">Join Room</button>
+        <div class="room-chips">
+          <div class="chip" onclick="joinRoom('room:COMMAND_CENTER')">COMMAND_CENTER</div>
+          <div class="chip" onclick="joinRoom('room:TIER_1_HUB')">TIER_1_HUB</div>
+          <div class="chip" onclick="joinRoom('room:TIER_2_FARMER')">TIER_2_FARMER</div>
+          <div class="chip" onclick="joinRoom('room:TIER_3_COMPOST')">TIER_3_COMPOST</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quick Simulation Test</h2>
+        <button class="btn-secondary" id="btn-quick-create">Ingest Mock Batch (API)</button>
+        <button class="btn-secondary" id="btn-quick-timewarp" style="margin-top: 8px;">Trigger Spoilage (Time-Warp)</button>
+        <button class="btn-danger" id="btn-clear-logs">Clear Event Logs</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="feed-header">
+        <h2>Live Event Stream</h2>
+        <div class="feed-stats">
+          Received: <span id="event-count" style="color: var(--primary); font-weight: 600;">0</span> events
+        </div>
+      </div>
+      <div class="logs-container" id="logs">
+        <div class="log-item">
+          <div class="log-meta">
+            <span class="log-event evt-system">SYSTEM</span>
+            <span>Ready</span>
+          </div>
+          <pre>Siap memantau broadcast WebSocket SIRKULA-AI.</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let eventCount = 0;
+    let lastCreatedBatchId = null;
+
+    const wsUrlInput = document.getElementById('ws-url');
+    const connBadge = document.getElementById('conn-badge');
+    const connIdText = document.getElementById('conn-id');
+    const logsContainer = document.getElementById('logs');
+    const eventCountSpan = document.getElementById('event-count');
+    const btnToggleConn = document.getElementById('btn-toggle-conn');
+
+    function addLog(eventName, data, cssClass) {
+      eventCount++;
+      eventCountSpan.textContent = eventCount;
+
+      const timeStr = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'log-item';
+      div.innerHTML = `
+        <div class="log-meta">
+          <span class="log-event ${cssClass}">${eventName}</span>
+          <span style="color: var(--text-muted);">${timeStr}</span>
+        </div>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+      logsContainer.prepend(div);
+    }
+
+    function connect() {
+      if (socket) socket.disconnect();
+      const targetUrl = wsUrlInput.value.trim() || 'http://localhost:4000';
+      socket = io(targetUrl, { transports: ['websocket', 'polling'] });
+
+      socket.on('connect', () => {
+        connBadge.className = 'badge badge-live';
+        connBadge.textContent = 'CONNECTED';
+        connIdText.textContent = 'Socket ID: ' + socket.id;
+        btnToggleConn.textContent = 'Disconnect';
+        addLog('CONNECT', { socketId: socket.id, target: targetUrl }, 'evt-system');
+
+        socket.emit('join:room', 'room:COMMAND_CENTER');
+        socket.emit('join:room', 'room:TIER_1_HUB');
+      });
+
+      socket.on('disconnect', () => {
+        connBadge.className = 'badge badge-off';
+        connBadge.textContent = 'DISCONNECTED';
+        connIdText.textContent = '-';
+        btnToggleConn.textContent = 'Connect';
+        addLog('DISCONNECT', { status: 'Socket disconnected' }, 'evt-system');
+      });
+
+      socket.on('batch:created', (data) => {
+        if (data?.batch_id) lastCreatedBatchId = data.batch_id;
+        addLog('batch:created', data, 'evt-created');
+      });
+
+      socket.on('batch:state_transitioned', (data) => {
+        addLog('batch:state_transitioned', data, 'evt-transitioned');
+      });
+
+      socket.on('batch:claimed', (data) => {
+        addLog('batch:claimed', data, 'evt-claimed');
+      });
+
+      socket.on('batch:handover_completed', (data) => {
+        addLog('batch:handover_completed', data, 'evt-handover');
+      });
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    }
+
+    btnToggleConn.addEventListener('click', () => {
+      if (socket && socket.connected) {
+        disconnect();
+      } else {
+        connect();
+      }
+    });
+
+    function joinRoom(room) {
+      if (!socket || !socket.connected) {
+        alert('Hubungkan socket terlebih dahulu!');
+        return;
+      }
+      socket.emit('join:room', room);
+      addLog('JOIN_ROOM', { room }, 'evt-system');
+    }
+
+    document.getElementById('btn-join-custom').addEventListener('click', () => {
+      const room = document.getElementById('custom-room').value.trim();
+      if (room) joinRoom(room);
+    });
+
+    document.getElementById('btn-clear-logs').addEventListener('click', () => {
+      logsContainer.innerHTML = '';
+      eventCount = 0;
+      eventCountSpan.textContent = '0';
+    });
+
+    document.getElementById('btn-quick-create').addEventListener('click', async () => {
+      const targetUrl = wsUrlInput.value.trim().replace(/\/+$/, '') || 'http://localhost:4000';
+      try {
+        const res = await fetch(`${targetUrl}/api/v1/batches/analyze-and-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-actor-id': 'a0000000-0000-0000-0000-000000000001',
+            'x-actor-role': 'DONOR'
+          },
+          body: JSON.stringify({
+            latitude: -6.917464,
+            longitude: 107.619123,
+            exposed_minutes: 30,
+            is_ac_room: false
+          })
+        });
+        const data = await res.json();
+        if (data?.batch?.id) lastCreatedBatchId = data.batch.id;
+        addLog('API:CREATE_BATCH', data, 'evt-created');
+      } catch (err) {
+        addLog('API_ERROR', { error: err.message }, 'evt-system');
+      }
+    });
+
+    document.getElementById('btn-quick-timewarp').addEventListener('click', async () => {
+      if (!lastCreatedBatchId) {
+        alert('Buat batch terlebih dahulu dengan Ingest Mock Batch!');
+        return;
+      }
+      const targetUrl = wsUrlInput.value.trim().replace(/\/+$/, '') || 'http://localhost:4000';
+      try {
+        const res = await fetch(`${targetUrl}/api/v1/simulation/time-warp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-actor-id': 'f0000000-0000-0000-0000-000000000001',
+            'x-actor-role': 'SIMULATOR_ADMIN'
+          },
+          body: JSON.stringify({
+            batch_id: lastCreatedBatchId,
+            force_expire_tier1: true,
+            notes: 'Demo instant spoilage trigger via Standalone WebSocket Test Client'
+          })
+        });
+        const data = await res.json();
+        addLog('API:TIME_WARP', data, 'evt-transitioned');
+      } catch (err) {
+        addLog('API_ERROR', { error: err.message }, 'evt-system');
+      }
+    });
+  </script>
+</body>
+</html>

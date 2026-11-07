@@ -1,0 +1,422 @@
+{
+  "info": {
+    "_postman_id": "sirkula-api-collection-v1",
+    "name": "SIRKULA-AI Backend & Distributed Triage API Test Suite",
+    "description": "End-to-End automated test suite for Sirkula-AI NestJS, PostGIS, Redis lock, BullMQ, and safety invariant validation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get Seeded Actors (1-Tap Switcher)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/actors",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "actors"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Actors array contains at least 11 seeded Bandung actors', function () {",
+              "    pm.expect(jsonData.actors).to.be.an('array');",
+              "    pm.expect(jsonData.actors.length).to.be.at.least(11);",
+              "});",
+              "var donor = jsonData.actors.find(function(a) { return a.role === 'DONOR'; });",
+              "var hub = jsonData.actors.find(function(a) { return a.role === 'TIER_1_HUB'; });",
+              "if (donor) { pm.environment.set('donor_id', donor.id); }",
+              "if (hub) { pm.environment.set('receiver_id', hub.id); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Zero-Click AI Ingestion & Bio-Thermal Calculation",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "{{donor_id}}" },
+          { "key": "x-actor-role", "value": "DONOR" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"latitude\": -6.8863,\n  \"longitude\": 107.6080,\n  \"exposed_minutes\": 15,\n  \"is_ac_room\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/analyze-and-create",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "analyze-and-create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Batch ID generated and bio-thermal window calculated', function () {",
+              "    pm.expect(jsonData.batch_id).to.be.a('string');",
+              "    pm.expect(jsonData.current_state).to.eql('TIER_1_HUMAN_ACTIVE');",
+              "    pm.expect(jsonData.detected_items).to.be.an('array').that.is.not.empty;",
+              "    pm.expect(jsonData.bio_thermal_timings.safe_window_human_min).to.be.a('number');",
+              "    pm.expect(jsonData.obfuscated_location.latitude).to.be.a('number');",
+              "});",
+              "pm.environment.set('batch_id', jsonData.batch_id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. PostGIS Spatial Radar Query (Nearby Batches)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "x-actor-id", "value": "{{receiver_id}}" },
+          { "key": "x-actor-role", "value": "TIER_1_HUB" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/nearby?latitude=-6.8863&longitude=107.6080&radius_m=3000",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "nearby"],
+          "query": [
+            { "key": "latitude", "value": "-6.8863" },
+            { "key": "longitude", "value": "107.6080" },
+            { "key": "radius_m", "value": "3000" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Geospatial radar returns batches sorted by distance', function () {",
+              "    pm.expect(jsonData.batches).to.be.an('array');",
+              "    var created = jsonData.batches.find(function(b) { return b.id === pm.environment.get('batch_id'); });",
+              "    pm.expect(created).to.be.an('object');",
+              "    pm.expect(created.distance_meters).to.be.a('number');",
+              "    pm.expect(created.exact_pickup_location).to.be.undefined;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Atomic Courier Claim (First Contender Success)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "{{receiver_id}}" },
+          { "key": "x-actor-role", "value": "TIER_1_HUB" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"claimed_for_tier\": \"TIER_1_HUMAN\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/{{batch_id}}/claim",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "{{batch_id}}", "claim"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Claim accepted, HMAC QR generated and pickup point unlocked', function () {",
+              "    pm.expect(jsonData.claim_id).to.be.a('string');",
+              "    pm.expect(jsonData.qr_token).to.be.a('string');",
+              "    pm.expect(jsonData.new_batch_state).to.eql('TIER_1_CLAIMED');",
+              "    pm.expect(jsonData.pickup_instructions.exact_pickup_location.latitude).to.be.a('number');",
+              "    pm.expect(jsonData.pickup_instructions.address_full).to.be.a('string');",
+              "});",
+              "pm.environment.set('claim_id', jsonData.claim_id);",
+              "pm.environment.set('qr_token', jsonData.qr_token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Double-Claim Race Condition Rejection (409 Conflict)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "b0000000-0000-0000-0000-000000000002" },
+          { "key": "x-actor-role", "value": "TIER_1_HUB" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"claimed_for_tier\": \"TIER_1_HUMAN\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/{{batch_id}}/claim",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "{{batch_id}}", "claim"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 409 Conflict', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Collision rejected safely', function () {",
+              "    pm.expect(jsonData.status_code).to.eql(409);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Handover Verification & Digital Waiver Issuance",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "{{donor_id}}" },
+          { "key": "x-actor-role", "value": "DONOR" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"handover_ambient_temp_c\": 31.0,\n  \"liability_waiver_accepted\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/{{batch_id}}/verify-handover",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "{{batch_id}}", "verify-handover"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Handover completed and Digital Liability Waiver hash issued', function () {",
+              "    pm.expect(jsonData.status).to.eql('HANDOVER_COMPLETED');",
+              "    pm.expect(jsonData.current_state).to.eql('COMPLETED');",
+              "    pm.expect(jsonData.digital_liability_waiver.certificate_no).to.match(/^SRK-ESG-/);",
+              "    pm.expect(jsonData.digital_liability_waiver.waiver_signature_hash).to.have.lengthOf(64);",
+              "    pm.expect(jsonData.esg_impact.co2e_avoided_kg).to.be.above(0);",
+              "    pm.expect(jsonData.esg_impact.methane_ch4_avoided_kg).to.be.above(0);",
+              "    pm.expect(jsonData.esg_impact.estimated_feed_savings_idr).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. ESG Carbon Telemetry & Waiver Registry",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/analytics/esg-summary",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "analytics", "esg-summary"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Aggregated ESG metrics and waiver certificates listed', function () {",
+              "    pm.expect(jsonData.total_batches_rescued).to.be.at.least(1);",
+              "    pm.expect(jsonData.total_weight_saved_kg).to.be.above(0);",
+              "    pm.expect(jsonData.co2e_avoided_kg).to.be.above(0);",
+              "    pm.expect(jsonData.recent_waiver_certificates).to.be.an('array').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Create Batch 2 for Safety Invariant Testing",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "{{donor_id}}" },
+          { "key": "x-actor-role", "value": "DONOR" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"latitude\": -6.8920,\n  \"longitude\": 107.6145,\n  \"exposed_minutes\": 0,\n  \"is_ac_room\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/analyze-and-create",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "analyze-and-create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.environment.set('batch_2_id', jsonData.batch_id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Claim Batch 2 by Courier",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "{{receiver_id}}" },
+          { "key": "x-actor-role", "value": "TIER_1_HUB" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"claimed_for_tier\": \"TIER_1_HUMAN\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/{{batch_2_id}}/claim",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "{{batch_2_id}}", "claim"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.environment.set('batch_2_qr_token', jsonData.qr_token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. God-Mode Time-Warp Instant Spoilage",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "f0000000-0000-0000-0000-000000000001" },
+          { "key": "x-actor-role", "value": "SIMULATOR_ADMIN" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"batch_id\": \"{{batch_2_id}}\",\n  \"force_expire_tier1\": true,\n  \"notes\": \"Judge demonstration of instant biological time-warp spoilage\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/simulation/time-warp",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "simulation", "time-warp"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Batch forcefully mutated to TIER_2_ANIMAL_ACTIVE', function () {",
+              "    pm.expect(jsonData.new_state).to.eql('TIER_2_ANIMAL_ACTIVE');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Absolute Safety Invariant Enforcement (422 Unprocessable Entity)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-actor-id", "value": "{{donor_id}}" },
+          { "key": "x-actor-role", "value": "DONOR" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qr_token\": \"{{batch_2_qr_token}}\",\n  \"handover_ambient_temp_c\": 35.0,\n  \"liability_waiver_accepted\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/batches/{{batch_2_id}}/verify-handover",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "batches", "{{batch_2_id}}", "verify-handover"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 or 409 because batch is already expired / mutated to Tier 2', function () {",
+              "    pm.expect([409, 422]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

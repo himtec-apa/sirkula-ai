@@ -1,0 +1,10 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+allowBuilds:
+  '@scarf/scarf': true
+  esbuild: true
+  msgpackr-extract: true
+  protobufjs: true
+minimumReleaseAgeExclude:
+  - "@google/genai@3.0.0"

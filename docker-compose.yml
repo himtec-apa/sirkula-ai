@@ -1,0 +1,117 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: sirkula-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: sirkula_db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./backend/packages/database/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sirkula_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    container_name: sirkula-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:-sirkula-redis-secure-pass} --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-sirkula-redis-secure-pass} ping | grep PONG"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: apps/backend/Dockerfile
+    container_name: sirkula-backend
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/sirkula_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-sirkula-redis-secure-pass}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-sirkula-redis-secure-pass}@redis:6379
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-62d836392a296af4dde5498938cbd06d}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-mock-gemini-key}
+      AI_API_KEY: ${AI_API_KEY:-sk-e5f00ee817185474-hij2gn-e98405cb}
+      AI_BASE_URL: ${AI_BASE_URL:-http://host.docker.internal:20128/v1}
+      AI_MODEL: ${AI_MODEL:-ag/gemini-3.8-flash-high}
+      HMAC_SECRET_KEY: ${HMAC_SECRET_KEY:-sirkula-super-secure-hmac-secret-key-32chars}
+      JWT_SECRET: ${JWT_SECRET:-sirkula-jwt-secret-key-minimum-32chars}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4000/api/v1/auth/actors').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: sirkula-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      HOST: 0.0.0.0
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  postman-runner:
+    image: postman/newman:alpine
+    container_name: sirkula-postman-runner
+    profiles:
+      - test
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./backend/tests/postman:/etc/newman
+    entrypoint: ["newman"]
+    command:
+      - run
+      - /etc/newman/sirkula-api.postman_collection.json
+      - --environment
+      - /etc/newman/sirkula-docker.postman_environment.json
+      - --reporters
+      - cli
+      - --bail
+
+volumes:
+  postgres_data:
+  redis_data:

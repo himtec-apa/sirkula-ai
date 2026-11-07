@@ -1,0 +1,29 @@
+{
+  "name": "sirkula-ai",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "db:migrate": "pnpm --filter @sirkula/database db:migrate",
+    "db:seed": "pnpm --filter @sirkula/database db:seed",
+    "db:reset": "pnpm --filter @sirkula/database db:reset",
+    "demo:prepare": "pnpm db:reset"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@scarf/scarf",
+      "esbuild",
+      "protobufjs",
+      "msgpackr-extract"
+    ]
+  }
+}

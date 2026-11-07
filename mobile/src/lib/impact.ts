@@ -1,0 +1,16 @@
+export {
+  BSF_HARVEST_YIELD_RATIO,
+  BSF_LARVAE_FED_PER_KG,
+  CO2E_AVOIDED_KG_PER_KG,
+  FEED_SAVINGS_IDR_PER_KG,
+  METHANE_AVOIDED_KG_PER_KG,
+  Q10_COEFFICIENT,
+  REFERENCE_TEMP_C,
+  calculateDynamicSafeWindow,
+  calculateQ10DecayMultiplier,
+  estimateBsfHarvestYieldKg,
+  estimateBsfLarvaeCount,
+  estimateCo2eAvoidedKg,
+  estimateFeedSavingsIdr,
+  estimateMethaneAvoidedKg,
+} from "@/lib/esg-converter";

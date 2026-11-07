@@ -1,0 +1,58 @@
+﻿{
+  "expo": {
+    "name": "SIRKULA-AI",
+    "slug": "sirkula-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "sirkula",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ai.sirkula.field"
+    },
+    "android": {
+      "package": "ai.sirkula.field",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5FAF9"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SIRKULA-AI memakai kamera untuk memindai sisa pangan."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SIRKULA-AI memakai lokasi untuk mencocokkan batch dengan simpul terdekat."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SIRKULA-AI memakai galeri untuk memilih foto sisa pangan."
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}
