@@ -316,7 +316,7 @@ export class BatchesService {
         ($4 = 'TIER_3_COMPOST' AND b.current_state = 'TIER_3_COMPOST_ACTIVE') OR
         ($4 IN ('DONOR', 'ESG_AUDITOR', 'SIMULATOR_ADMIN'))
       )
-      ORDER BY distance_meters ASC;
+      ORDER BY b.created_at DESC;
     `;
 
     const result = await this.pool.query(sql, [lng, lat, radiusM, actorRole, effectiveActorId || null]);

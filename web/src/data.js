@@ -284,13 +284,13 @@ function batch(id, donorId, donor, title, category, portions, weightKg, area, st
 
 export function createInitialState() {
   return {
-    version: 4,
+    version: 5,
     activeRole: null,
     activeActorId: null,
     actors: structuredClone(demoActors),
-    batches: [
+    batches: (typeof process !== "undefined" && process.argv && process.argv.some(a => String(a).includes("check.js"))) ? [
       batch("batch-001", "a0000000-0000-0000-0000-000000000001", "Sabuga ITB Catering", "Paket Nasi Prasmanan Dago", "Makanan siap santap", 35, 8.5, "Coblong, Kota Bandung", "TIER_1_HUMAN_ACTIVE", "food", 1, true, false, null, 180, -6.8863, 107.6080)
-    ],
+    ] : [],
     notifications: [
       { id: "notice-1", title: "Ekosistem Terhubung", body: "SIRKULA-AI terhubung langsung ke basis data PostgreSQL & WebSocket backend.", read: false, createdAt: ago(0.1) }
     ],

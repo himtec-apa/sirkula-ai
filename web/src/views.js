@@ -76,7 +76,9 @@ function simulationTag(label) {
 }
 
 function photo(scene, alt, data) {
-  if (data) return "<div class='photo-frame'><img src='" + esc(data) + "' alt='" + esc(alt) + "' loading='lazy'></div>";
+  if (data && !data.includes("storage.sirkula.local") && !data.includes("bXktcmVhb")) {
+    return "<div class='photo-frame'><img src='" + esc(data) + "' alt='" + esc(alt) + "' loading='lazy'></div>";
+  }
   const allowed = ["donor", "hub", "food", "bakery", "compost", "feed"];
   const safe = allowed.includes(scene) ? scene : "food";
   return "<div class='photo-frame scene scene--" + safe + "' role='img' aria-label='" + esc(alt) + "'></div>";

@@ -2,7 +2,7 @@ import { ROLES, BATCH_STATES, createInitialState, demoActors } from "./data.js";
 import { api, setApiSession, getApiSession } from "./api.js";
 import { initSocket, isSocketConnected } from "./socket.js";
 
-const STORAGE_KEY = "sirkula.food-rescue.live.v4";
+const STORAGE_KEY = "sirkula.food-rescue.live.v5";
 const USERS_STORAGE_KEY = "sirkula.registered_users.v2";
 let stateWarning = "";
 
@@ -460,15 +460,7 @@ export async function syncBackendData() {
     const nearbyRes = await api.getNearbyBatches({ latitude: lat, longitude: lng, radius_m: 50000 });
     if (nearbyRes && Array.isArray(nearbyRes.batches)) {
       update((next) => {
-        const syncedBatches = nearbyRes.batches.map(normalizeBatch);
-        const seen = new Set(syncedBatches.map((b) => b.id));
-        const merged = [...syncedBatches];
-        for (const localB of next.batches) {
-          if (!seen.has(localB.id)) {
-            merged.push(localB);
-          }
-        }
-        next.batches = merged;
+        next.batches = nearbyRes.batches.map(normalizeBatch);
         if (isSocketConnected()) next.wsConnected = true;
         return true;
       });
